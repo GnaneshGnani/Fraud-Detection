@@ -1,0 +1,7 @@
+archive.zip
+Gnanesh_accessKeys.csv
+*.ppk
+*.docx
+data/
+__pycache__/
+
