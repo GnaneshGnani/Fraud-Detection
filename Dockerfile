@@ -11,7 +11,3 @@ COPY ./min_max_scaler.pkl .
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-docker start -ai 0d8929a9ce16
-
-docker inspect 80ff3fd0f7ac | grep -i "port"
