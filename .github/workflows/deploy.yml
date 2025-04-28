@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v2
 
       - name: Configure AWS Credentials
@@ -25,16 +25,16 @@ jobs:
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
-      - name: Build Docker image
+      - name: Build Docker Image
         run: |
           docker build -t fraud-detection-api .
           docker tag fraud-detection-api:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fraud-detection-api:latest
 
-      - name: Push Docker image to ECR
+      - name: Push Docker Image to ECR
         run: |
           docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/fraud-detection-api:latest
 
-      - name: Update ECS service
+      - name: Update ECS Service
         run: |
           aws ecs update-service \
             --cluster fraud-detection-cluster \
