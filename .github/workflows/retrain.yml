@@ -1,4 +1,4 @@
-name: Drift Detection
+name: Detect Drift and Retrain
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch: 
 
 jobs:
-  nightly-drift:
+  detect-drift:
     runs-on: ubuntu-latest
     
     concurrency:                           # avoid overlaps
@@ -16,6 +16,9 @@ jobs:
     permissions:
       id-token: write
       contents: write
+
+    outputs:
+      drift: ${{ steps.drift-flag.outputs.drift }}
 
     steps:
       - name: Checkout Code
@@ -33,12 +36,25 @@ jobs:
       - name: Run Drift Report
         run: python monitoring/run_drift.py
 
-      - name: Commit DRIFT.flag (if any)
+      - name: Detect Drift
+        id: drift-flag
         run: |
           if test -f DRIFT.flag; then
-            git config user.name github-actions-bot
-            git config user.email github-actions-bot@users.noreply.github.com
-            git add DRIFT.flag
-            git commit -m "DATA_UPDATE $(date -u +%F)" || true
-            git push
+            echo "drift=true" >> "$GITHUB_OUTPUT"
           fi
+          
+  retrain:
+    needs: detect-drift
+    
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
