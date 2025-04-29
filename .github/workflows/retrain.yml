@@ -30,21 +30,19 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Install Deps
+      - name: Install Dependencies
         run: pip install evidently pandas boto3
 
       - name: Run Drift Report
-        run: python run_drift.py
-
-      - name: Detect Drift
         id: drift-flag
-        run: |
-          if test -f DRIFT.flag; then
-            echo "drift=true" >> "$GITHUB_OUTPUT"
-          fi
+        run: python -m scripts.detect_drift.py
+
+      - name: Update files
+        run: echo ${{ steps.drift-flag.outputs.drift }}
           
   retrain:
     needs: detect-drift
+    if: needs.detect-drift.outputs.drift == 'true'
     
     runs-on: ubuntu-latest
 

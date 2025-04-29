@@ -3,5 +3,6 @@ Gnanesh_accessKeys.csv
 *.ppk
 *.docx
 data/*.csv
+data/*/*.csv
 __pycache__/
-
+original_data

@@ -1,3 +1,4 @@
+import os
 import torch
 import joblib
 import pandas as pd
@@ -58,7 +59,7 @@ def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, de
                 f"| Test Loss : {test_loss / test_size:.4f} | Test Accuracy : {test_correct / test_size:.2f}")
 
 def main():
-    df = pd.read_csv("./data/creditcard_2023.csv")
+    df = pd.read_csv("./data/references/baseline.csv")
 
     drop_columns = ["id"]
     df = df.drop(columns = drop_columns)
@@ -86,7 +87,9 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
 
     train(model, num_epochs, criterion, optimizer, train_loader, test_loader, device)
-    torch.save(model.state_dict(), "artifacts/model/fraud_model.pth")
+    
+    curr_models_count = len(os.listdir("artifacts/model"))
+    torch.save(model.state_dict(), "artifacts/model/fraud_model_" + str(curr_models_count + 1) + ".pth")
 
 if __name__ == "__main__":
     main()

@@ -1,3 +1,4 @@
+import os
 import torch
 import joblib
 import numpy as np
@@ -8,7 +9,8 @@ from src.models.model import FraudDetectionModel
 app = FastAPI()
 
 model = FraudDetectionModel()
-model.load_state_dict(torch.load("artifacts/model/fraud_model.pth", map_location = torch.device('cpu')))
+latest_model_number = os.listdir("artifacts/model")
+model.load_state_dict(torch.load("artifacts/model/fraud_model" + str(latest_model_number) + ".pth", map_location = torch.device('cpu')))
 model.eval()
 
 @app.get("/")
@@ -17,9 +19,6 @@ def home():
 
 @app.post("/predict")
 def predict(data: dict):
-    # print(data)
-    # return data
-
     min_max_scaler = joblib.load('artifacts/model/min_max_scaler.pkl')
 
     features = np.array(data["features"]).reshape(1, -1)
