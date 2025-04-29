@@ -37,7 +37,7 @@ jobs:
 
       - name: Run Drift Report
         id: drift-flag
-        run: python -m scripts.detect_drift.py
+        run: python -m scripts.detect_drift
 
       - name: Update files
         run: echo ${{ steps.drift-flag.outputs.drift }}
