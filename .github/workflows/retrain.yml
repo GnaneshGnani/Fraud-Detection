@@ -34,7 +34,7 @@ jobs:
         run: pip install evidently pandas boto3
 
       - name: Run Drift Report
-        run: python monitoring/run_drift.py
+        run: python run_drift.py
 
       - name: Detect Drift
         id: drift-flag

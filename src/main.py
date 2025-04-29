@@ -3,12 +3,12 @@ import joblib
 import numpy as np
 
 from fastapi import FastAPI
-from model import FraudDetectionModel
+from src.models.model import FraudDetectionModel
 
 app = FastAPI()
 
 model = FraudDetectionModel()
-model.load_state_dict(torch.load("fraud_model.pth", map_location = torch.device('cpu')))
+model.load_state_dict(torch.load("artifacts/model/fraud_model.pth", map_location = torch.device('cpu')))
 model.eval()
 
 @app.get("/")
@@ -20,7 +20,7 @@ def predict(data: dict):
     # print(data)
     # return data
 
-    min_max_scaler = joblib.load('min_max_scaler.pkl')
+    min_max_scaler = joblib.load('artifacts/model/min_max_scaler.pkl')
 
     features = np.array(data["features"]).reshape(1, -1)
     features[0][-1] = min_max_scaler.transform(features[0][-1].reshape(1, -1))
