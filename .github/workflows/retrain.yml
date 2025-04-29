@@ -29,8 +29,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # role-to-assume: ${{ secrets.OIDC_ROLE }}
-          role-to-assume: arn:aws:iam::651706779911:role/github-oidc-fraud-detection
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install Dependencies
