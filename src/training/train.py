@@ -66,7 +66,7 @@ def main():
 
     min_max_scaler = MinMaxScaler()
     df["Amount"] = min_max_scaler.fit_transform(df["Amount"].values.reshape(-1 ,1))
-    joblib.dump(min_max_scaler, 'artifacts/model/min_max_scaler.pkl')
+    joblib.dump(min_max_scaler, 'artifacts/min_max_scaler.pkl')
 
     X = df.drop(columns = "Class").values
     y = df["Class"].values

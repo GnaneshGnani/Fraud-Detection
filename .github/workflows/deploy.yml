@@ -1,9 +1,11 @@
 name: Deploy to ECS
 
 on:
-  # push:
-  #   branches:
-  #     - main
+  push:
+    paths:
+      - 'artifacts/**'
+    # branches:
+    #   - main
   workflow_dispatch:  # This allows manual triggering
 
 jobs:

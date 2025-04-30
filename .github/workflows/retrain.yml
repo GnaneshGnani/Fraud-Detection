@@ -68,4 +68,12 @@ jobs:
 
       - name: Retrain
         run: python -m src.training.train
+      
+      - name: Push Artifacts
+        run: |
+          git config user.name github-actions-bot
+          git config user.email github-actions-bot@users.noreply.github.com
+          git add artifacts
+          git commit -m "Auto-retrain: $(date -u +%F)" || echo "No changes"
+          git push
 
