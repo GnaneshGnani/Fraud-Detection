@@ -59,7 +59,7 @@ def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, de
                 f"| Test Loss : {test_loss / test_size:.4f} | Test Accuracy : {test_correct / test_size:.2f}")
 
 def main():
-    df = pd.read_csv("./data/references/baseline.csv")
+    df = pd.read_csv("data/baseline.csv")
 
     drop_columns = ["id"]
     df = df.drop(columns = drop_columns)
