@@ -18,7 +18,7 @@ from evidently.presets import DataDriftPreset
 # print("Detected Drift:", drift_score)
 # value = "true" if drift_score > 0.5 else "false"
 
-value = "false"
+value = "true"
 
 output_path = os.environ["GITHUB_OUTPUT"]
 with open(output_path, "a") as f:
