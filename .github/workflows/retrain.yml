@@ -53,6 +53,10 @@ jobs:
     
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write      # <- allow git push
+      id-token: write      # (keep this if you still assume the AWS role)
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
