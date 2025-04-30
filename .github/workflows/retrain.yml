@@ -64,7 +64,9 @@ jobs:
       #     aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+          pip install --no-cache-dir -r requirements.txt
 
       - name: Retrain
         run: python -m src.training.train
