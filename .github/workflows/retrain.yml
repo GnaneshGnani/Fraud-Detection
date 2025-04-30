@@ -64,7 +64,7 @@ jobs:
       #     aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install Dependencies
-        run: pip install requirements.txt
+        run: pip install -r requirements.txt
 
       - name: Retrain
         run: python -m src.training.train
