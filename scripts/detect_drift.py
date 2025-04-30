@@ -16,8 +16,10 @@ from evidently.presets import DataDriftPreset
 # result.save_json(f"reports/drift/{today_date}.json")
 
 # print("Detected Drift:", drift_score)
-# if drift_score > 0.5:
-#     os.environ["GITHUB_OUTPUT"] = "true"
-# else:
-#     os.environ["GITHUB_OUTPUT"] = "false"
-os.environ["GITHUB_OUTPUT"] = "false"
+# value = "true" if drift_score > 0.5 else "false"
+
+value = "false"
+
+output_path = os.environ["GITHUB_OUTPUT"]
+with open(output_path, "a") as f:
+    f.write(f"drift={value}\n")
