@@ -63,3 +63,9 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Install Dependencies
+        run: pip install requirements.txt
+
+      - name: Retrain
+        run: python -m src.training.train
+
