@@ -40,7 +40,12 @@ jobs:
         run: python -m scripts.detect_drift
 
       - name: Update files
-        run: echo ${{ steps.drift-flag.outputs.drift }}
+        if: steps.drift-flag.outputs.drift == 'true'
+        run: echo "True"
+        
+      - name: Update files False
+        if: steps.drift-flag.outputs.drift == 'false'
+        run: echo "False"
           
   retrain:
     needs: detect-drift
