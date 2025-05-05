@@ -60,7 +60,11 @@ jobs:
         
       - name: Update files False
         if: steps.drift-flag.outputs.drift == 'false'
-        run: echo "False"
+        run: |
+          echo "False"
+          ls -l
+          ls data -l
+          ls artifacts -l
           
   retrain:
     needs: detect-drift
