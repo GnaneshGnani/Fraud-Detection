@@ -2,6 +2,7 @@ import os
 import torch
 import joblib
 import pandas as pd
+from clearml import Task
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -9,6 +10,13 @@ from sklearn.model_selection import train_test_split
 from src.models.model import FraudDetectionModel
 from src.data.fraud_dataset import CustomDataset
 from src.models.hyperparameters import num_epochs, batch_size, learning_rate
+
+task = Task.init(
+    project_name = "Fraud Detection",  # Name of your project in ClearML UI
+    task_name = "PyTorch Model Training",  # Name of this experiment
+)
+
+logger = task.get_logger()
 
 def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, device):
     for epoch in range(num_epochs):
@@ -57,6 +65,22 @@ def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, de
 
         print(f"Epoch: {epoch + 1:3d}/{num_epochs} | Train Loss : {train_loss / train_size:.4f} | Train Accuracy : {train_correct / train_size:.2f}",
                 f"| Test Loss : {test_loss / test_size:.4f} | Test Accuracy : {test_correct / test_size:.2f}")
+        
+        # Log training loss
+        logger.report_scalar(
+            title = "Loss",         # Category (group)
+            series = "Train",       # Series (line)
+            value = train_loss,     # The actual metric value
+            iteration = epoch       # X-axis (epoch or step)
+        )
+
+        # Log validation loss
+        logger.report_scalar(
+            title = "Loss",
+            series = "Validation",
+            value = test_loss,
+            iteration = epoch
+        )
 
 def main():
     df = pd.read_csv("data/baseline.csv")
