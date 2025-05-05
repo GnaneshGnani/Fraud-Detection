@@ -56,15 +56,13 @@ jobs:
         if: steps.drift-flag.outputs.drift == 'true'
         run: |
           echo "True"
-          ls -l
+          # python -m scripts.replace_baseline
         
       - name: Update files False
         if: steps.drift-flag.outputs.drift == 'false'
         run: |
           echo "False"
-          ls -l
-          ls data -l
-          ls artifacts -l
+          # python -m scripts.update_baseline
           
   retrain:
     needs: detect-drift
