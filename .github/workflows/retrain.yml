@@ -1,8 +1,8 @@
 name: Detect Drift and Retrain
 
 on:
-  schedule:
-    - cron: '0 4 * * *'
+  # schedule:
+  #   - cron: '0 4 * * *'
   workflow_dispatch: 
 
 jobs:
@@ -40,29 +40,44 @@ jobs:
       - name: Pull Data & Artifacts
         run: dvc pull -q
 
-      - name: Sync new files from S3
+      - name: Sync Files From S3
         run: |
           mkdir -p data/incoming
           aws s3 sync s3://$S3_BUCKET/$FOLDER_NAME data/$FOLDER_NAME --delete --exact-timestamps
-          python -m scripts.merge_incoming_files
           echo "NEWFILES=$(ls -1 data/$FOLDER_NAME | wc -l)" >> $GITHUB_ENV
 
       - name: Run Drift Report
         if: env.NEWFILES != '0'
         id: drift-flag
-        run: python -m scripts.detect_drift
+        run: |
+          python -m scripts.merge_incoming_files
+          python -m scripts.detect_drift
 
-      - name: Update files
+      - name: Replace Baseline
         if: steps.drift-flag.outputs.drift == 'true'
         run: |
-          echo "True"
-          # python -m scripts.replace_baseline
+          python -m scripts.replace_baseline
         
-      - name: Update files False
+      - name: Modify Baseline
         if: steps.drift-flag.outputs.drift == 'false'
         run: |
-          echo "False"
-          # python -m scripts.update_baseline
+          python -m scripts.update_baseline
+          
+      - name: Update DVC and S3
+        if: env.NEWFILES != '0'
+        run: |
+          aws s3 sync data/$FOLDER_NAME s3://$S3_BUCKET/$FOLDER_NAME --delete --exact-timestamps
+          dvc add data/baseline.csv
+          dvc push
+
+      - name: Push Data
+        if: env.NEWFILES != '0'
+        run: |
+          git config user.name github-actions-bot
+          git config user.email github-actions-bot@users.noreply.github.com
+          git add data
+          git commit -m "Auto-update: $(date -u +%F)" || echo "No changes"
+          git push
           
   retrain:
     needs: detect-drift
@@ -83,11 +98,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     role-to-assume: ${{ secrets.OIDC_ROLE }}
-      #     aws-region: ${{ secrets.AWS_REGION }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install Dependencies
         run: |
@@ -96,12 +111,17 @@ jobs:
 
       - name: Retrain
         run: python -m src.training.train
-      
+
+      - name: Update DVC and S3
+        run: |
+          dvc add artifacts
+          dvc push
+          
       - name: Push Artifacts
         run: |
           git config user.name github-actions-bot
           git config user.email github-actions-bot@users.noreply.github.com
-          git add artifacts
+          git add artifacts.dvc
           git commit -m "Auto-retrain: $(date -u +%F)" || echo "No changes"
           git push
 
