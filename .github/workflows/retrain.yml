@@ -75,7 +75,7 @@ jobs:
         run: |
           git config user.name github-actions-bot
           git config user.email github-actions-bot@users.noreply.github.com
-          git add data
+          git add data/baseline.csv.dvc
           git commit -m "Auto-update: $(date -u +%F)" || echo "No changes"
           git push
           
@@ -97,6 +97,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0           # get full history so pull/rebase works
+
+      - name: Rebase
+        run: git pull --rebase origin "$GITHUB_REF_NAME"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -137,6 +142,11 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0           # get full history so pull/rebase works
+
+      - name: Rebase
+        run: git pull --rebase origin "$GITHUB_REF_NAME"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
