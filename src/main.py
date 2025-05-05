@@ -9,7 +9,7 @@ from src.models.model import FraudDetectionModel
 app = FastAPI()
 
 model = FraudDetectionModel()
-latest_model_number = os.listdir("artifacts/model")
+latest_model_number = len(os.listdir("artifacts/model"))
 model.load_state_dict(torch.load("artifacts/model/fraud_model_" + str(latest_model_number) + ".pth", map_location = torch.device('cpu')))
 model.eval()
 
