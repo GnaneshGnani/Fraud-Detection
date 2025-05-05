@@ -104,6 +104,9 @@ jobs:
           role-to-assume: ${{ secrets.OIDC_ROLE }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Pull Data & Artifacts
+        run: dvc pull -q
+
       - name: Install Dependencies
         run: |
           pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
