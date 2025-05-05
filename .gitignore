@@ -2,7 +2,9 @@ archive.zip
 Gnanesh_accessKeys.csv
 *.ppk
 *.docx
-# data/*.csv
+artifacts/*.pkl
+artifacts/*/*.pth
+data/*.csv
 data/*/*.csv
 __pycache__/
 original_data
