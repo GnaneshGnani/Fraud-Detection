@@ -35,8 +35,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install Dependencies
-        # run: pip install evidently pandas boto3 dvc[s3]
-        run: pip install pandas dvc[s3]
+        run: pip install evidently pandas boto3 dvc[s3]
 
       - name: Pull Data & Artifacts
         run: dvc pull -q
