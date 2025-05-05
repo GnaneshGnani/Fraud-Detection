@@ -8,6 +8,10 @@ on:
 jobs:
   detect-drift:
     runs-on: ubuntu-latest
+
+    env:
+      S3_BUCKET: fraud-detection-dvc-store
+      FOLDER_NAME: incoming
     
     concurrency:                           # avoid overlaps
       group: drift-${{ github.ref }}
@@ -41,7 +45,8 @@ jobs:
       - name: Sync new files from S3
         run: |
           mkdir -p data/incoming
-          aws s3 sync s3://$S3_BUCKET/$DATA_PREFIX data/new --delete --exact-timestamps
+          aws s3 sync s3://$S3_BUCKET/$FOLDER_NAME data/$FOLDER_NAME --delete --exact-timestamps
+          python -m scripts.merge_incoming_files
           echo "NEWFILES=$(ls -1 data/new | wc -l)" >> $GITHUB_ENV
 
       - name: Run Drift Report
@@ -53,6 +58,7 @@ jobs:
         if: steps.drift-flag.outputs.drift == 'true'
         run: |
           echo "True"
+          ls -l
         
       - name: Update files False
         if: steps.drift-flag.outputs.drift == 'false'
