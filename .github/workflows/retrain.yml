@@ -33,15 +33,26 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install Dependencies
-        run: pip install evidently pandas boto3
+        run: pip install evidently pandas boto3 dvc[s3]
+
+      - name: Pull Data & Artifacts
+        run: dvc pull -q
+
+      - name: Sync new files from S3
+        run: |
+          mkdir -p data/incoming
+          aws s3 sync s3://$S3_BUCKET/$DATA_PREFIX data/new --delete --exact-timestamps
+          echo "NEWFILES=$(ls -1 data/new | wc -l)" >> $GITHUB_ENV
 
       - name: Run Drift Report
+        if: env.NEWFILES != '0'
         id: drift-flag
         run: python -m scripts.detect_drift
 
       - name: Update files
         if: steps.drift-flag.outputs.drift == 'true'
-        run: echo "True"
+        run: |
+          echo "True"
         
       - name: Update files False
         if: steps.drift-flag.outputs.drift == 'false'
