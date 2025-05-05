@@ -35,7 +35,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Install Dependencies
-        run: pip install evidently pandas boto3 dvc[s3]
+        run: pip install --no-cache-dir evidently pandas boto3 dvc[s3]
 
       - name: Pull Data & Artifacts
         run: dvc pull -q
@@ -158,6 +158,9 @@ jobs:
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      - name: Install Dependencies
+        run: pip install --no-cache-dir dvc[s3]
 
       - name: Pull Data & Artifacts
         run: dvc pull artifacts -q
