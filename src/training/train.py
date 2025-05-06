@@ -1,11 +1,17 @@
 import os
 import torch
 import joblib
+import numpy as np
 import pandas as pd
 from clearml import Task
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
+from sklearn.metrics import roc_curve, auc
+
 
 from src.models.model import FraudDetectionModel
 from src.data.fraud_dataset import CustomDataset
@@ -15,6 +21,12 @@ task = Task.init(
     project_name = "Fraud Detection",  # Name of your project in ClearML UI
     task_name = "PyTorch Model Training",  # Name of this experiment
 )
+
+task.connect({
+    'batch_size': 32,
+    'learning_rate': 0.001,
+    'epochs': 10
+})
 
 logger = task.get_logger()
 
@@ -27,6 +39,9 @@ def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, de
         test_correct = 0
         test_loss = 0
         test_size = 0
+
+        all_test_labels = []
+        all_test_probs = []
         
         for features, labels in train_loader:
             features = features.to(device).float()
@@ -63,6 +78,9 @@ def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, de
                 test_loss += loss.item()
                 test_size += len(labels)
 
+                all_test_labels.append(labels.cpu().numpy())
+                all_test_probs.append(probs.cpu().numpy())
+
         print(f"Epoch: {epoch + 1:3d}/{num_epochs} | Train Loss : {train_loss / train_size:.4f} | Train Accuracy : {train_correct / train_size:.2f}",
                 f"| Test Loss : {test_loss / test_size:.4f} | Test Accuracy : {test_correct / test_size:.2f}")
         
@@ -70,7 +88,7 @@ def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, de
         logger.report_scalar(
             title = "Loss",         # Category (group)
             series = "Train",       # Series (line)
-            value = train_loss,     # The actual metric value
+            value = train_loss / train_size,     # The actual metric value
             iteration = epoch       # X-axis (epoch or step)
         )
 
@@ -78,9 +96,50 @@ def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, de
         logger.report_scalar(
             title = "Loss",
             series = "Validation",
-            value = test_loss,
+            value = test_loss / test_size,
             iteration = epoch
         )
+    
+    # After training, calculate F1-score, Precision, Recall, ROC-AUC
+    all_test_labels = np.concatenate(all_test_labels, axis=0)
+    all_test_probs = np.concatenate(all_test_probs, axis=0)
+    all_test_predictions = (all_test_probs > 0.5).astype(float)
+    
+    accuracy = accuracy_score(all_test_labels, all_test_predictions)
+    f1 = f1_score(all_test_labels, all_test_predictions)
+    precision = precision_score(all_test_labels, all_test_predictions)
+    recall = recall_score(all_test_labels, all_test_predictions)
+    roc_auc = roc_auc_score(all_test_labels, all_test_probs)
+    
+    # Log the metrics to ClearML
+    logger.report_scalar('Accuracy', 'final', iteration = 0, value = accuracy)
+    logger.report_scalar('F1-score', 'final', iteration = 0, value = f1)
+    logger.report_scalar('Precision', 'final', iteration = 0, value = precision)
+    logger.report_scalar('Recall', 'final', iteration = 0, value = recall)
+    logger.report_scalar('ROC_AUC', 'final', iteration = 0, value = roc_auc)
+    
+    # Generate and save the ROC curve
+    fpr, tpr, thresholds = roc_curve(all_test_labels, all_test_probs)
+    roc_auc_value = auc(fpr, tpr)
+    
+    plt.figure()
+    plt.plot(fpr, tpr, color = 'darkorange', lw = 2, label = 'ROC curve (area = %0.2f)' % roc_auc_value)
+    plt.plot([0, 1], [0, 1], color = 'navy', lw = 2, linestyle = '--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title(f'Receiver Operating Characteristic (ROC) - Epoch {num_epochs}')
+    plt.legend(loc = "lower right")
+
+    # Save the ROC curve plot
+    roc_curve_image_path = 'roc_curve.png'
+    plt.savefig(roc_curve_image_path)
+    plt.close()
+
+    task.upload_artifact(name = 'ROC Curve', artifact_object = roc_curve_image_path)
+
+    task.upload_artifact(name = "Model", artifact_object = model)
 
 def main():
     df = pd.read_csv("data/baseline.csv")
