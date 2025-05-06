@@ -8,9 +8,10 @@ from src.models.model import FraudDetectionModel
 
 app = FastAPI()
 
-model = FraudDetectionModel()
+model_params = joblib.load('artifacts/model_params.pkl')
+model = FraudDetectionModel(model_params["input_size"], model_params["hidden_size"], model_params["output_size"])
 latest_model_number = len(os.listdir("artifacts/model"))
-model.load_state_dict(torch.load("artifacts/model/fraud_model_" + str(latest_model_number) + ".pth", map_location = torch.device('cpu')))
+model.load_state_dict(torch.load("artifacts/model/fraud_model_" + str(latest_model_number) + ".pth", map_location = torch.device('cpu'), weights_only = True))
 model.eval()
 
 @app.get("/")

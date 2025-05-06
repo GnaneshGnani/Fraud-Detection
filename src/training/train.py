@@ -1,145 +1,27 @@
 import os
 import torch
 import joblib
-import numpy as np
 import pandas as pd
 from clearml import Task
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, accuracy_score
 from sklearn.metrics import roc_curve, auc
 
+from src.models.model import PyTorchModel
 
-from src.models.model import FraudDetectionModel
-from src.data.fraud_dataset import CustomDataset
-from src.models.hyperparameters import num_epochs, batch_size, learning_rate
+param_grid = {
+    'hidden_size': [16, 32],
+    'lr': [0.001, 0.01],
+    'num_epochs': [10, 20]
+}
 
 task = Task.init(
     project_name = "Fraud Detection",  # Name of your project in ClearML UI
-    task_name = "PyTorch Model Training",  # Name of this experiment
+    task_name = "PyTorch Model Grid Search",  # Name of this experiment
 )
-
-task.connect({
-    'batch_size': 32,
-    'learning_rate': 0.001,
-    'epochs': 10
-})
-
-logger = task.get_logger()
-
-def train(model, num_epochs, criterion, optimizer, train_loader, test_loader, device):
-    for epoch in range(num_epochs):
-        train_correct = 0
-        train_loss = 0
-        train_size = 0
-        
-        test_correct = 0
-        test_loss = 0
-        test_size = 0
-
-        all_test_labels = []
-        all_test_probs = []
-        
-        for features, labels in train_loader:
-            features = features.to(device).float()
-            labels = labels.to(device).float()
-            optimizer.zero_grad()
-
-            probs = model(features).squeeze()
-            predictions = (probs > 0.5).float()
-
-            loss = criterion(probs, labels)
-            
-            loss.backward()
-            optimizer.step()
-
-            correct = (predictions == labels).sum()
-            
-            train_correct += correct
-            train_loss += loss.item()
-            train_size += len(labels)
-
-        with torch.no_grad():
-            for features, labels in test_loader:
-                features = features.to(device).float()
-                labels = labels.to(device).float()
-    
-                probs = model(features).squeeze()
-                predictions = (probs > 0.5).float()
-
-                loss = criterion(probs, labels)
-    
-                correct = (predictions == labels).sum()
-    
-                test_correct += correct
-                test_loss += loss.item()
-                test_size += len(labels)
-
-                all_test_labels.append(labels.cpu().numpy())
-                all_test_probs.append(probs.cpu().numpy())
-
-        print(f"Epoch: {epoch + 1:3d}/{num_epochs} | Train Loss : {train_loss / train_size:.4f} | Train Accuracy : {train_correct / train_size:.2f}",
-                f"| Test Loss : {test_loss / test_size:.4f} | Test Accuracy : {test_correct / test_size:.2f}")
-        
-        # Log training loss
-        logger.report_scalar(
-            title = "Loss",         # Category (group)
-            series = "Train",       # Series (line)
-            value = train_loss / train_size,     # The actual metric value
-            iteration = epoch       # X-axis (epoch or step)
-        )
-
-        # Log validation loss
-        logger.report_scalar(
-            title = "Loss",
-            series = "Validation",
-            value = test_loss / test_size,
-            iteration = epoch
-        )
-    
-    # After training, calculate F1-score, Precision, Recall, ROC-AUC
-    all_test_labels = np.concatenate(all_test_labels, axis=0)
-    all_test_probs = np.concatenate(all_test_probs, axis=0)
-    all_test_predictions = (all_test_probs > 0.5).astype(float)
-    
-    accuracy = accuracy_score(all_test_labels, all_test_predictions)
-    f1 = f1_score(all_test_labels, all_test_predictions)
-    precision = precision_score(all_test_labels, all_test_predictions)
-    recall = recall_score(all_test_labels, all_test_predictions)
-    roc_auc = roc_auc_score(all_test_labels, all_test_probs)
-    
-    # Log the metrics to ClearML
-    logger.report_scalar('Accuracy', 'final', iteration = 0, value = accuracy)
-    logger.report_scalar('F1-score', 'final', iteration = 0, value = f1)
-    logger.report_scalar('Precision', 'final', iteration = 0, value = precision)
-    logger.report_scalar('Recall', 'final', iteration = 0, value = recall)
-    logger.report_scalar('ROC_AUC', 'final', iteration = 0, value = roc_auc)
-    
-    # Generate and save the ROC curve
-    fpr, tpr, thresholds = roc_curve(all_test_labels, all_test_probs)
-    roc_auc_value = auc(fpr, tpr)
-    
-    plt.figure()
-    plt.plot(fpr, tpr, color = 'darkorange', lw = 2, label = 'ROC curve (area = %0.2f)' % roc_auc_value)
-    plt.plot([0, 1], [0, 1], color = 'navy', lw = 2, linestyle = '--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title(f'Receiver Operating Characteristic (ROC) - Epoch {num_epochs}')
-    plt.legend(loc = "lower right")
-
-    # Save the ROC curve plot
-    roc_curve_image_path = 'roc_curve.png'
-    plt.savefig(roc_curve_image_path)
-    plt.close()
-
-    task.upload_artifact(name = 'ROC Curve', artifact_object = roc_curve_image_path)
-
-    task.upload_artifact(name = "Model", artifact_object = model)
 
 def main():
     df = pd.read_csv("data/baseline.csv")
@@ -156,23 +38,79 @@ def main():
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.8)
 
-    train_dataset = CustomDataset(X_train, y_train)
-    test_dataset = CustomDataset(X_test, y_test)
-
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size = batch_size)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size = batch_size)
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = PyTorchModel(input_size = X.shape[1], output_size = 1)
 
-    model = FraudDetectionModel().to(device)
+    grid_search = GridSearchCV(estimator = model, param_grid = param_grid, cv = 3)
+    grid_search.fit(X_train, y_train)
 
-    criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr = learning_rate)
+    print("Best parameters found: ", grid_search.best_params_)
+    print("Best cross-validation score: ", grid_search.best_score_)
 
-    train(model, num_epochs, criterion, optimizer, train_loader, test_loader, device)
-    
+    best_model = grid_search.best_estimator_
+    test_score = best_model.score(X_test, y_test)
+    print("Test accuracy: ", test_score)
+    print(best_model)
+
+    best_params = grid_search.best_params_
+    task.connect({
+        'learning_rate': best_params['lr'],
+        'hidden_size': best_params['hidden_size'],
+        'epochs': best_params['num_epochs']
+    })
+
+    logger = task.get_logger()
+
+    for mode, X, y in zip(['Train', 'Test'], [X_train, X_test], [y_train, y_test]):
+        y_pred = best_model.predict(X)
+        y_prob = best_model.predict_proba(X)
+
+        accuracy = accuracy_score(y, y_pred)
+        f1 = f1_score(y, y_pred)
+        precision = precision_score(y, y_pred)
+        recall = recall_score(y, y_pred)
+        roc_auc = roc_auc_score(y, y_pred)
+        
+        # Log the metrics to ClearML
+        logger.report_scalar('Accuracy', mode, iteration = 0, value = accuracy)
+        logger.report_scalar('F1-score', mode, iteration = 0, value = f1)
+        logger.report_scalar('Precision', mode, iteration = 0, value = precision)
+        logger.report_scalar('Recall', mode, iteration = 0, value = recall)
+        logger.report_scalar('ROC_AUC', mode, iteration = 0, value = roc_auc)
+        
+        # Generate and save the ROC curve
+        fpr, tpr, _ = roc_curve(y, y_prob)
+        roc_auc_value = auc(fpr, tpr)
+        
+        plt.figure()
+        plt.plot(fpr, tpr, color = 'darkorange', lw = 2, label = 'ROC curve (area = %0.2f)' % roc_auc_value)
+        plt.plot([0, 1], [0, 1], color = 'navy', lw = 2, linestyle = '--')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title(f'Receiver Operating Characteristic (ROC) - Train')
+        plt.legend(loc = "lower right")
+
+        # Save the ROC curve plot
+        roc_curve_image_path = f'roc_curve_{mode.lower()}.png'
+        plt.savefig(roc_curve_image_path)
+        plt.close()
+
+        task.upload_artifact(name = f'ROC Curve - {mode}', artifact_object = roc_curve_image_path)
+
+    task.upload_artifact(name = "Model", artifact_object = best_model.model)
+
+    model_params = {
+        "input_size": X.shape[1],
+        "hidden_size": best_params["hidden_size"],
+        "output_size": 1
+    }
+
+    joblib.dump(model_params, 'artifacts/model_params.pkl')
+
     curr_models_count = len(os.listdir("artifacts/model"))
-    torch.save(model.state_dict(), "artifacts/model/fraud_model_" + str(curr_models_count + 1) + ".pth")
+    torch.save(best_model.model.state_dict(), "artifacts/model/fraud_model_" + str(curr_models_count + 1) + ".pth")
 
 if __name__ == "__main__":
     main()
