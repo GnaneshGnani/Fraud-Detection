@@ -5,9 +5,10 @@ on:
     branches:
       - main
     paths-ignore:
-      - '**/*.dvc'     # every .dvc pointer file, anywhere
-      - '.dvc/**'      # everything inside the hidden .dvc/ directory
-      - 'dvc.lock'     # (optional) skip if only the lockfile changes
+      - '**/*.yml'
+      - '**/*.dvc'    
+      - '.dvc/**'      
+      - 'dvc.lock'     
   workflow_dispatch:  # This allows manual triggering
 
 jobs:
